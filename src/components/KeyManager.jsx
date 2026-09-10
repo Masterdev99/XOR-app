@@ -1,5 +1,6 @@
 import React, { useState, forwardRef, useImperativeHandle } from 'react';
 import { toB64, toHex, fromB64, fromHex, shannonEntropy, strengthInfo } from '../utils/xor';
+import { Eye, EyeOff, Copy, Refresh, Star, XIcon } from './Icons';
 
 const KeyManager = forwardRef(({ showCharset = false }, ref) => {
   const [tab, setTab]           = useState('manual');
@@ -99,10 +100,9 @@ const KeyManager = forwardRef(({ showCharset = false }, ref) => {
               className="ibtn has-tooltip"
               data-tooltip={visible ? 'Hide key' : 'Show key'}
               onClick={() => setVisible(v => !v)}
-              style={{ opacity: visible ? 1 : 0.5 }}
-            >👁</button>
-            <button className="ibtn has-tooltip" data-tooltip="Copy key" onClick={() => copy(manualKey)}>⎘</button>
-            <button className="ibtn has-tooltip" data-tooltip="Clear key" onClick={() => setManualKey('')}>✕</button>
+            >{visible ? <Eye /> : <EyeOff />}</button>
+            <button className="ibtn has-tooltip" data-tooltip="Copy key" onClick={() => copy(manualKey)}><Copy /></button>
+            <button className="ibtn has-tooltip" data-tooltip="Clear key" onClick={() => setManualKey('')}><XIcon /></button>
           </div>
           <div className="km-meta">
             <span className="km-meta-i">length: <span>{manualKey.length}</span></span>
@@ -146,9 +146,9 @@ const KeyManager = forwardRef(({ showCharset = false }, ref) => {
           </div>
           <div className="gen-out-row">
             <input type="text" value={genOut} readOnly placeholder="Press ⟳ to generate a key" />
-            <button className="ibtn has-tooltip" data-tooltip="Generate key" onClick={genKey}>⟳</button>
-            <button className="ibtn has-tooltip" data-tooltip="Copy key" onClick={() => copy(genOut)}>⎘</button>
-            <button className="ibtn has-tooltip" data-tooltip="Save to history" onClick={saveHist}>★</button>
+            <button className="ibtn has-tooltip" data-tooltip="Generate key" onClick={genKey}><Refresh /></button>
+            <button className="ibtn has-tooltip" data-tooltip="Copy key" onClick={() => copy(genOut)}><Copy /></button>
+            <button className="ibtn has-tooltip" data-tooltip="Save to history" onClick={saveHist}><Star /></button>
           </div>
           <div className="sbar">
             <div className="sfill" style={{ width: (genStr?.pct || 0) + '%', background: genStr?.color || '' }} />
