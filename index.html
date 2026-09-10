@@ -1,0 +1,979 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>XOR tool</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #ffffff;
+  --text: #1a1a1a;
+  --muted: #6b7280;
+  --faint: #9ca3af;
+  --border: #e4e4e7;
+  --border-h: #c8c8cc;
+  --field: #ffffff;
+  --field-2: #f6f6f7;
+  --accent: #1a1a1a;
+
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* legacy aliases so original inline styles still resolve */
+  --surface: var(--bg); --surface2: var(--field-2); --surface3: #ececed;
+  --hint: var(--faint); --accent-dim: #f0f0f1; --accent-border: #111;
+  --warn: #b7791f; --danger: #c0392b; --info: #2563eb; --r: 6px; --rl: 6px;
+}
+
+body {
+  background: var(--bg); color: var(--text); font-family: var(--sans);
+  font-size: 14px; line-height: 1.5; min-height: 100vh;
+  padding: 3rem 1.25rem 5rem; -webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: 640px; margin: 0 auto; }
+
+/* header */
+header { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 2rem; padding-bottom: 1.25rem; border-bottom: 1px solid var(--border); }
+header h1 { font-size: 16px; font-weight: 600; letter-spacing: -0.01em; }
+.modes { display: flex; gap: 2px; }
+.mode { appearance: none; border: none; background: none; cursor: pointer; font-family: var(--sans); font-size: 13px; color: var(--muted); padding: 4px 10px; border-radius: 5px; }
+.mode:hover { color: var(--text); }
+.mode.active { color: var(--text); font-weight: 600; }
+
+/* sections */
+.block { margin-bottom: 1.75rem; }
+.sec { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 0.75rem; }
+label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 5px; }
+
+/* fields */
+textarea, input[type=text] {
+  width: 100%; background: var(--field); border: 1px solid var(--border);
+  border-radius: 6px; padding: 9px 11px; color: var(--text);
+  font-family: var(--mono); font-size: 13px; outline: none; transition: border-color .12s;
+}
+textarea { min-height: 120px; resize: vertical; line-height: 1.55; }
+textarea::placeholder, input::placeholder { color: var(--faint); }
+textarea:focus, input[type=text]:focus { border-color: #888; }
+
+.field { margin-bottom: 1rem; }
+.field:last-child { margin-bottom: 0; }
+
+/* pills / segmented */
+.pills { display: inline-flex; gap: 4px; flex-wrap: wrap; }
+.pill { font-family: var(--sans); font-size: 12px; padding: 4px 11px; border: 1px solid var(--border); border-radius: 5px; background: var(--field); color: var(--muted); cursor: pointer; transition: all .12s; }
+.pill:hover { border-color: var(--border-h); color: var(--text); }
+.pill.active { background: var(--text); color: #fff; border-color: var(--text); }
+
+/* buttons */
+.actionbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 1.25rem 0; }
+.fmt-inline { display: flex; align-items: center; gap: 8px; }
+.fmt-inline > span { font-size: 12px; color: var(--muted); }
+.spacer { flex: 1 1 auto; }
+.btn { font-family: var(--sans); font-size: 13px; padding: 8px 16px; border: 1px solid var(--border-h); border-radius: 6px; background: var(--field); color: var(--text); cursor: pointer; transition: all .12s; }
+.btn:hover { background: var(--field-2); }
+.btn.primary { background: var(--text); color: #fff; border-color: var(--text); font-weight: 500; }
+.btn.primary:hover { background: #333; }
+.btn.ghost { background: none; border-color: transparent; color: var(--muted); padding-left: 4px; padding-right: 8px; }
+.btn.ghost:hover { color: var(--text); background: none; }
+
+/* icon buttons */
+.ibtn { flex-shrink: 0; width: 30px; height: 30px; border: 1px solid var(--border); border-radius: 5px; background: var(--field); color: var(--muted); cursor: pointer; display: grid; place-items: center; font-size: 12px; transition: all .12s; }
+.ibtn:hover { border-color: var(--border-h); color: var(--text); }
+
+.cbtn { font-family: var(--sans); font-size: 12px; padding: 3px 9px; border: 1px solid var(--border); border-radius: 5px; background: var(--field); color: var(--muted); cursor: pointer; transition: all .12s; }
+.cbtn:hover { border-color: var(--border-h); color: var(--text); }
+.cbtn.ok { color: #15803d; border-color: #15803d; }
+
+.obox { background: var(--field-2); border: 1px solid var(--border); border-radius: 6px; padding: 11px; font-family: var(--mono); font-size: 13px; min-height: 48px; word-break: break-all; white-space: pre-wrap; line-height: 1.6; }
+.obox.empty { color: var(--faint); }
+.err { color: var(--danger); font-size: 12px; margin-top: 7px; }
+.err:empty { margin-top: 0; }
+
+/* key manager */
+.km { border: 1px solid var(--border); border-radius: 6px; padding: 11px; background: var(--field-2); }
+.km-tabs { display: inline-flex; gap: 2px; margin-bottom: 10px; }
+.kmt { font-family: var(--sans); font-size: 12px; padding: 4px 11px; border: 1px solid var(--border); border-radius: 5px; background: var(--field); color: var(--muted); cursor: pointer; transition: all .12s; }
+.kmt:hover { color: var(--text); }
+.kmt.active { background: var(--text); color: #fff; border-color: var(--text); }
+
+.km-irow { display: flex; gap: 6px; align-items: center; }
+.km-irow input { flex: 1; }
+.km-meta { display: flex; gap: 14px; margin-top: 8px; flex-wrap: wrap; }
+.km-meta-i { font-size: 12px; color: var(--muted); }
+.km-meta-i span { color: var(--text); font-weight: 500; }
+.km-meta-i span.warn { color: var(--warn); }
+.km-meta-i span.danger { color: var(--danger); }
+
+.gen-cfg { display: flex; gap: 18px; flex-wrap: wrap; align-items: flex-start; margin-bottom: 10px; }
+.gen-cfg-col { display: flex; flex-direction: column; gap: 6px; }
+.gen-cfg-col label { margin: 0; }
+.range-row { display: flex; align-items: center; gap: 8px; }
+.range-row input[type=range] { width: 100px; accent-color: var(--text); cursor: pointer; }
+.rv { font-size: 12px; font-family: var(--mono); min-width: 24px; }
+.gen-out-row { display: flex; gap: 6px; align-items: center; }
+.gen-out-row input { flex: 1; background: var(--field); cursor: default; }
+.sbar { height: 4px; border-radius: 2px; background: var(--border); margin: 9px 0 6px; overflow: hidden; }
+.sfill { height: 100%; border-radius: 2px; transition: width .3s, background .3s; }
+.gen-meta { display: flex; gap: 14px; flex-wrap: wrap; }
+.gen-meta-i { font-size: 12px; color: var(--muted); }
+
+.cset { display: flex; gap: 10px; flex-wrap: wrap; }
+.cset-item { display: flex; align-items: center; gap: 5px; cursor: pointer; }
+.cset-item input[type=checkbox] { accent-color: var(--text); cursor: pointer; }
+.cset-item span { font-size: 12px; color: var(--muted); }
+
+.hist-section { margin-top: 11px; border-top: 1px solid var(--border); padding-top: 11px; }
+.hist-label { font-size: 12px; color: var(--muted); margin-bottom: 7px; }
+.hist-list { display: flex; flex-direction: column; gap: 4px; max-height: 120px; overflow-y: auto; }
+.hist-item { display: flex; align-items: center; gap: 6px; background: var(--field); border: 1px solid var(--border); border-radius: 5px; padding: 5px 8px; }
+.hist-val { flex: 1; font-family: var(--mono); font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hist-use { font-size: 11px; padding: 2px 9px; border: 1px solid var(--border); border-radius: 5px; background: var(--field); color: var(--muted); cursor: pointer; }
+.hist-use:hover { color: var(--text); border-color: var(--border-h); }
+.hist-del { font-size: 13px; color: var(--faint); cursor: pointer; border: none; background: none; padding: 0 2px; }
+.hist-del:hover { color: var(--danger); }
+.hist-empty { font-size: 12px; color: var(--faint); }
+
+/* encoded blob — plain collapsible */
+.blob-strip { border: 1px solid var(--border); border-radius: 6px; margin-bottom: 1.25rem; }
+.blob-head { display: flex; align-items: center; gap: 8px; width: 100%; background: none; border: none; cursor: pointer; padding: 10px 12px; text-align: left; color: var(--text); font-family: var(--sans); }
+.blob-head:hover { background: var(--field-2); }
+.blob-chevron { color: var(--faint); font-size: 9px; transition: transform .2s; }
+.blob-chevron.open { transform: rotate(90deg); }
+.blob-title { font-size: 13px; font-weight: 500; }
+.blob-hint { font-size: 12px; color: var(--faint); margin-left: auto; font-family: var(--mono); }
+.blob-body { max-height: 0; overflow: hidden; transition: max-height .25s ease; }
+.blob-body.open { max-height: 460px; }
+.blob-inner { padding: 0 12px 12px; }
+
+/* payload stub — the main output */
+.stub { border: 1px solid var(--border-h); border-radius: 6px; padding: 1.1rem 1.15rem; }
+.stub-head { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 11px; }
+.stub-name h2 { font-size: 14px; font-weight: 600; }
+.stub-controls { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.stub-div { width: 1px; height: 15px; background: var(--border); }
+.stub-warn { font-size: 12px; color: var(--warn); margin-bottom: 11px; padding: 7px 10px; background: #fbf6ec; border: 1px solid #efe0c4; border-radius: 6px; line-height: 1.5; }
+.stub-warn code { font-family: var(--mono); font-size: 11px; }
+.stub-code { background: var(--field-2); border: 1px solid var(--border); border-radius: 6px; padding: 12px; font-family: var(--mono); font-size: 12px; line-height: 1.65; min-height: 150px; word-break: break-all; white-space: pre-wrap; color: var(--text); }
+
+/* analyze */
+.ana-grid { display: grid; gap: 12px; }
+.ana-row { display: flex; flex-direction: column; gap: 4px; }
+.ana-lbl { font-size: 12px; color: var(--muted); }
+.ana-val { font-family: var(--mono); font-size: 13px; }
+.ana-out { background: var(--field-2); border: 1px solid var(--border); border-radius: 6px; padding: 10px; font-family: var(--mono); font-size: 12px; max-height: 200px; overflow: auto; word-break: break-all; white-space: pre-wrap; line-height: 1.55; }
+
+.badge { display: inline-block; font-size: 11px; font-family: var(--sans); padding: 1px 7px; border-radius: 4px; margin-left: 6px; border: 1px solid var(--border); color: var(--muted); }
+
+@media (max-width: 480px) {
+  body { padding: 2rem 1rem 4rem; }
+  .stub-div { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>XOR tool</h1>
+  <div class="modes">
+    <button class="mode active" onclick="switchTab('encode')">Encode</button>
+    <button class="mode" onclick="switchTab('decode')">Decode</button>
+    <button class="mode" onclick="switchTab('analyze')">Analyze</button>
+  </div>
+</header>
+
+<!-- ENCODE -->
+<div id="tab-encode">
+  <div class="block">
+    <label>Plaintext</label>
+    <textarea id="enc-plain" placeholder="Enter text to encode…"></textarea>
+  </div>
+
+  <div class="block">
+    <label>Key</label>
+    <div class="km" id="km-enc">
+      <div class="km-tabs">
+        <button class="kmt active" onclick="setKM('enc','manual',this)">Manual</button>
+        <button class="kmt" onclick="setKM('enc','generate',this)">Generate</button>
+      </div>
+      <div id="enc-manual">
+        <div class="km-irow">
+          <input type="text" id="enc-key" placeholder="Type your key…" oninput="updateManualMeta('enc')" />
+          <button class="ibtn" title="Show/hide" onclick="toggleVis('enc-key',this)">👁</button>
+          <button class="ibtn" title="Copy key" onclick="cpField('enc-key')">⎘</button>
+          <button class="ibtn" title="Clear" onclick="clearKey('enc-key','enc')">✕</button>
+        </div>
+        <div class="km-meta">
+          <span class="km-meta-i">length: <span id="enc-mlen">0</span></span>
+          <span class="km-meta-i">entropy: <span id="enc-ment">—</span></span>
+          <span class="km-meta-i">strength: <span id="enc-mstr">—</span></span>
+        </div>
+        <div class="sbar"><div class="sfill" id="enc-mfill" style="width:0%"></div></div>
+      </div>
+      <div id="enc-generate" style="display:none">
+        <div class="gen-cfg">
+          <div class="gen-cfg-col">
+            <label>Key length</label>
+            <div class="range-row">
+              <input type="range" min="8" max="64" value="16" id="enc-size" oninput="onRange('enc')" />
+              <span class="rv" id="enc-sz-val">16</span>
+              <span style="font-size:12px;color:var(--faint)">bytes</span>
+            </div>
+          </div>
+          <div class="gen-cfg-col">
+            <label>Key format</label>
+            <div class="pills">
+              <button class="pill active" onclick="setKF('enc','base64',this)">Base64</button>
+              <button class="pill" onclick="setKF('enc','hex',this)">Hex</button>
+            </div>
+          </div>
+          <div class="gen-cfg-col">
+            <label>Charset (string mode)</label>
+            <div class="cset">
+              <label class="cset-item"><input type="checkbox" id="enc-cs-alpha" checked /><span>a-z A-Z</span></label>
+              <label class="cset-item"><input type="checkbox" id="enc-cs-num" checked /><span>0-9</span></label>
+              <label class="cset-item"><input type="checkbox" id="enc-cs-sym" /><span>!@#$…</span></label>
+            </div>
+          </div>
+        </div>
+        <div class="gen-out-row">
+          <input type="text" id="enc-gen-out" readonly placeholder="Press ⟳ to generate a key" />
+          <button class="ibtn" title="Generate" onclick="genKey('enc')">⟳</button>
+          <button class="ibtn" title="Copy" onclick="cpField('enc-gen-out')">⎘</button>
+          <button class="ibtn" title="Save" onclick="saveHist('enc')">★</button>
+        </div>
+        <div class="sbar"><div class="sfill" id="enc-gfill" style="width:0%"></div></div>
+        <div class="gen-meta">
+          <span class="gen-meta-i">entropy: <span id="enc-gent">—</span></span>
+          <span class="gen-meta-i">strength: <span id="enc-gstr">—</span></span>
+        </div>
+        <div class="hist-section">
+          <div class="hist-label">Key history</div>
+          <div class="hist-list" id="enc-hist"><span class="hist-empty">No saved keys yet</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="actionbar">
+    <div class="fmt-inline">
+      <span>Output</span>
+      <div class="pills">
+        <button class="pill active" onclick="setFmt('enc','base64',this)">Base64</button>
+        <button class="pill" onclick="setFmt('enc','hex',this)">Hex</button>
+        <button class="pill" onclick="setFmt('enc','raw',this)">Raw bytes</button>
+      </div>
+    </div>
+    <div class="spacer"></div>
+    <button class="btn ghost" onclick="clearTab('enc')">Clear</button>
+    <button class="btn primary" onclick="doEncode()">Encode</button>
+  </div>
+
+  <!-- encoded blob, collapsed by default -->
+  <div class="blob-strip" id="blob-card">
+    <button class="blob-head" onclick="toggleBlob()">
+      <span class="blob-chevron" id="blob-chevron">▶</span>
+      <span class="blob-title">Encoded blob</span>
+      <span id="enc-badge"></span>
+      <span class="blob-hint" id="blob-size-hint"></span>
+    </button>
+    <div class="blob-body" id="blob-body">
+      <div class="blob-inner">
+        <div style="display:flex;justify-content:flex-end;margin-bottom:7px">
+          <button class="cbtn" id="enc-cbtn" onclick="cpOut('enc-out','enc-cbtn')">Copy</button>
+        </div>
+        <div class="obox empty" id="enc-out">—</div>
+        <div class="err" id="enc-err"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- payload stub -->
+  <div class="stub" id="enc-wrapper-card" style="display:none">
+    <div class="stub-head">
+      <div class="stub-name"><h2>Payload stub</h2></div>
+      <div class="stub-controls">
+        <div class="pills" id="stub-style-pills">
+          <button class="pill active" onclick="setStubStyle('browser',this)">Browser JS</button>
+          <button class="pill" onclick="setStubStyle('node',this)">Node.js</button>
+          <button class="pill" onclick="setStubStyle('wscript',this)">WScript</button>
+        </div>
+        <div class="stub-div"></div>
+        <div class="pills" id="stub-enc-pills">
+          <button class="pill active" onclick="setStubFmt('base64',this)">Base64</button>
+          <button class="pill" onclick="setStubFmt('hex',this)">Hex</button>
+          <button class="pill" onclick="setStubFmt('raw',this)">Raw bytes</button>
+        </div>
+        <button class="cbtn" id="stub-cbtn" onclick="cpOut('enc-stub','stub-cbtn')">Copy</button>
+      </div>
+    </div>
+    <div class="stub-warn">Runs the decoded payload via <code>eval()</code> / <code>new Function()</code>. For research and analysis only.</div>
+    <div class="stub-code" id="enc-stub"></div>
+  </div>
+</div>
+
+<!-- DECODE -->
+<div id="tab-decode" style="display:none">
+  <div class="block">
+    <label>Encoded payload</label>
+    <textarea id="dec-payload" placeholder="Paste Base64, hex, or raw XOR'd bytes…"></textarea>
+  </div>
+
+  <div class="block">
+    <label>Key</label>
+    <div class="km" id="km-dec">
+      <div class="km-tabs">
+        <button class="kmt active" onclick="setKM('dec','manual',this)">Manual</button>
+        <button class="kmt" onclick="setKM('dec','generate',this)">Generate</button>
+      </div>
+      <div id="dec-manual">
+        <div class="km-irow">
+          <input type="text" id="dec-key" placeholder="Type your key…" oninput="updateManualMeta('dec')" />
+          <button class="ibtn" title="Show/hide" onclick="toggleVis('dec-key',this)">👁</button>
+          <button class="ibtn" title="Copy key" onclick="cpField('dec-key')">⎘</button>
+          <button class="ibtn" title="Clear" onclick="clearKey('dec-key','dec')">✕</button>
+        </div>
+        <div class="km-meta">
+          <span class="km-meta-i">length: <span id="dec-mlen">0</span></span>
+          <span class="km-meta-i">entropy: <span id="dec-ment">—</span></span>
+          <span class="km-meta-i">strength: <span id="dec-mstr">—</span></span>
+        </div>
+        <div class="sbar"><div class="sfill" id="dec-mfill" style="width:0%"></div></div>
+      </div>
+      <div id="dec-generate" style="display:none">
+        <div class="gen-cfg">
+          <div class="gen-cfg-col">
+            <label>Key length</label>
+            <div class="range-row">
+              <input type="range" min="8" max="64" value="16" id="dec-size" oninput="onRange('dec')" />
+              <span class="rv" id="dec-sz-val">16</span>
+              <span style="font-size:12px;color:var(--faint)">bytes</span>
+            </div>
+          </div>
+          <div class="gen-cfg-col">
+            <label>Key format</label>
+            <div class="pills">
+              <button class="pill active" onclick="setKF('dec','base64',this)">Base64</button>
+              <button class="pill" onclick="setKF('dec','hex',this)">Hex</button>
+            </div>
+          </div>
+        </div>
+        <div class="gen-out-row">
+          <input type="text" id="dec-gen-out" readonly placeholder="Press ⟳ to generate a key" />
+          <button class="ibtn" title="Generate" onclick="genKey('dec')">⟳</button>
+          <button class="ibtn" title="Copy" onclick="cpField('dec-gen-out')">⎘</button>
+          <button class="ibtn" title="Save" onclick="saveHist('dec')">★</button>
+        </div>
+        <div class="sbar"><div class="sfill" id="dec-gfill" style="width:0%"></div></div>
+        <div class="gen-meta">
+          <span class="gen-meta-i">entropy: <span id="dec-gent">—</span></span>
+          <span class="gen-meta-i">strength: <span id="dec-gstr">—</span></span>
+        </div>
+        <div class="hist-section">
+          <div class="hist-label">Key history</div>
+          <div class="hist-list" id="dec-hist"><span class="hist-empty">No saved keys yet</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="actionbar">
+    <div class="fmt-inline">
+      <span>Input</span>
+      <div class="pills">
+        <button class="pill active" onclick="setFmt('dec','base64',this)">Base64</button>
+        <button class="pill" onclick="setFmt('dec','hex',this)">Hex</button>
+        <button class="pill" onclick="setFmt('dec','raw',this)">Raw</button>
+      </div>
+    </div>
+    <div class="spacer"></div>
+    <button class="btn ghost" onclick="prefill()">Load sample</button>
+    <button class="btn ghost" onclick="clearTab('dec')">Clear</button>
+    <button class="btn primary" onclick="doDecode()">Decode</button>
+  </div>
+
+  <div class="block">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px">
+      <div class="sec" style="margin:0">Decrypted output <span id="dec-badge"></span></div>
+      <button class="cbtn" id="dec-cbtn" onclick="cpOut('dec-out','dec-cbtn')">Copy</button>
+    </div>
+    <div class="obox empty" id="dec-out">—</div>
+    <div class="err" id="dec-err"></div>
+  </div>
+</div>
+
+<!-- ANALYZE -->
+<div id="tab-analyze" style="display:none">
+  <div class="block">
+    <div class="field">
+      <label>Payload (Base64)</label>
+      <textarea id="ana-payload" placeholder="Paste Base64 payload…" style="min-height:100px"></textarea>
+    </div>
+    <div class="field">
+      <label>Known key (Base64)</label>
+      <div style="display:flex;gap:6px;align-items:center">
+        <input type="text" id="ana-key" placeholder="Paste Base64 key…" style="flex:1" />
+        <button class="ibtn" title="Show/hide" onclick="toggleVis('ana-key',this)">👁</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="actionbar">
+    <div class="spacer"></div>
+    <button class="btn ghost" onclick="prefillAnalyze()">Load sample</button>
+    <button class="btn primary" onclick="doAnalyze()">Analyze</button>
+  </div>
+
+  <div class="block" id="ana-results" style="display:none">
+    <div class="sec">Results</div>
+    <div class="ana-grid" id="ana-out"></div>
+  </div>
+</div>
+
+</div><!-- /wrap -->
+<script>
+/* ══ state ══ */
+const encFmt  = {v:'base64'};
+const decFmt  = {v:'base64'};
+const encKFmt = {v:'base64'};
+const decKFmt = {v:'base64'};
+const km      = {enc:'manual', dec:'manual'};
+const hist    = {enc:[], dec:[]};
+let   stubStyle = 'browser';
+let   lastBlob  = null;   // {blob, keyB64, keyFmt}
+
+function setStubStyle(s, el) {
+  stubStyle = s;
+  el.closest('#stub-style-pills').querySelectorAll('.pill').forEach(p=>p.classList.remove('active'));
+  el.classList.add('active');
+  if (lastBlob) renderStub(lastBlob);
+}
+
+function setStubFmt(fmt, el) {
+  /* sync stub output format pills */
+  el.closest('#stub-enc-pills').querySelectorAll('.pill').forEach(p=>p.classList.remove('active'));
+  el.classList.add('active');
+  encFmt.v = fmt;
+  /* mirror back to the encode-tab output format pills */
+  const encPills = document.querySelectorAll('#tab-encode .actionbar .fmt-inline .pills .pill');
+  const fmts = ['base64','hex','raw'];
+  encPills.forEach((p,i) => p.classList.toggle('active', fmts[i] === fmt));
+  if (lastBlob) {
+    lastBlob.blobFmt = fmt;
+    const r = fmt==='base64' ? toB64(lastBlob.blob) : fmt==='hex' ? toHex(lastBlob.blob) : Array.from(lastBlob.blob).join(', ');
+    setOut('enc-out', r);
+    renderStub(lastBlob);
+  }
+}
+
+function renderStub({blob, keyRaw, blobFmt}) {
+  const el = document.getElementById('enc-stub');
+
+  /* ── format the encoded array as chunked lines, exactly like the sample ── */
+  function fmtArr(bytes, chunkSize) {
+    var chunks = [];
+    for (var i = 0; i < bytes.length; i += chunkSize) {
+      chunks.push('    ' + Array.from(bytes.slice(i, i + chunkSize)).join(','));
+    }
+    return chunks.join(',\n');
+  }
+
+  /* ── encoded blob representations ── */
+  const rawBytes  = Array.from(blob);
+  const b64str    = toB64(blob);
+  const hexStr    = rawBytes.map(x => x.toString(16).padStart(2,'0')).join('');
+  const chunkedRaw = fmtArr(blob, 16);
+
+  /* ── key representation ── */
+  const isSingleByte = keyRaw.length === 1;
+  const keyHexLit    = '0x' + keyRaw[0].toString(16).toUpperCase().padStart(2,'0');
+  const keyArrChunk  = fmtArr(keyRaw, 16);
+
+  /* key declaration block — single byte uses 0xNN style, multi uses array */
+  function keyDecl(style) {
+    if (isSingleByte) {
+      return '    var key = ' + keyHexLit + ';';
+    } else {
+      if (style === 'node') {
+        return '    var key = Buffer.from([\n' + keyArrChunk + '\n    ]);';
+      }
+      return '    var key = [\n' + keyArrChunk + '\n    ];';
+    }
+  }
+
+  /* XOR expression — single byte: `encoded[i] ^ key`, multi: `encoded[i] ^ key[i % key.length]` */
+  const xorExpr = isSingleByte ? 'encoded[i] ^ key' : 'encoded[i] ^ key[i % key.length]';
+  const xorExprBuf = isSingleByte ? 'enc[i] ^ key' : 'enc[i] ^ key[i % key.length]';
+
+  /* ── blob declaration block, honouring the selected output format ── */
+  function blobDecl(style) {
+    if (blobFmt === 'raw') {
+      return '    var encoded = [\n' + chunkedRaw + '\n    ];';
+    }
+    if (blobFmt === 'hex') {
+      if (style === 'node') {
+        return '    var encoded = Buffer.from("' + hexStr + '", "hex");';
+      }
+      if (style === 'wscript') {
+        return (
+          '    var _hs = "' + hexStr + '";\n' +
+          '    var encoded = [];\n' +
+          '    for (var _i = 0; _i < _hs.length; _i += 2) { encoded.push(parseInt(_hs.substr(_i, 2), 16)); }'
+        );
+      }
+      /* browser */
+      return (
+        '    var _hs = "' + hexStr + '";\n' +
+        '    var encoded = new Uint8Array(_hs.match(/.{2}/g).map(function(h) { return parseInt(h, 16); }));'
+      );
+    }
+    /* base64 */
+    if (style === 'node') {
+      return '    var encoded = Buffer.from("' + b64str + '", "base64");';
+    }
+    if (style === 'wscript') {
+      /* WScript has no atob — inline a minimal Base64 decoder */
+      return (
+        '    /* Base64 decode (WScript has no atob) */\n' +
+        '    var _b = "' + b64str + '", _m = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/", encoded = [];\n' +
+        '    for (var _i = 0; _i < _b.length; _i += 4) {\n' +
+        '      var _a=_m.indexOf(_b[_i]),_c=_m.indexOf(_b[_i+1]),_d=_m.indexOf(_b[_i+2]),_e=_m.indexOf(_b[_i+3]);\n' +
+        '      encoded.push((_a<<2)|(_c>>4)); if(_d!==-1)encoded.push(((_c&15)<<4)|(_d>>2)); if(_e!==-1)encoded.push(((_d&3)<<6)|_e);\n' +
+        '    }'
+      );
+    }
+    /* browser */
+    return (
+      '    var _b64 = "' + b64str + '";\n' +
+      '    var _bin = atob(_b64);\n' +
+      '    var encoded = new Uint8Array(_bin.length);\n' +
+      '    for (var _i = 0; _i < _bin.length; _i++) { encoded[_i] = _bin.charCodeAt(_i); }'
+    );
+  }
+
+  const fmtComment = blobFmt === 'base64' ? 'Base64' : blobFmt === 'hex' ? 'Hex' : 'raw byte array';
+
+  let stub = '';
+
+  /* ══ BROWSER JS ══ */
+  if (stubStyle === 'browser') {
+    stub =
+`(function() {
+  try {
+    /* blob format: ${fmtComment} */
+${blobDecl('browser')}
+${keyDecl('browser')}
+    var decoded = "";
+    for (var i = 0; i < encoded.length; i++) {
+      decoded += String.fromCharCode(${xorExpr});
+    }
+    new Function(decoded)();
+  } catch(e) {
+    console.error("Error: " + e.message);
+  }
+})();`;
+  }
+
+  /* ══ NODE.JS ══ */
+  else if (stubStyle === 'node') {
+    stub =
+`(function() {
+  try {
+    /* blob format: ${fmtComment} */
+${blobDecl('node')}
+${keyDecl('node')}
+    var decoded = "";
+    for (var i = 0; i < encoded.length; i++) {
+      decoded += String.fromCharCode(${xorExprBuf});
+    }
+    eval(decoded);
+  } catch(e) {
+    console.error("Error: " + e.message);
+  }
+})();`;
+  }
+
+  /* ══ WSCRIPT ══ */
+  else if (stubStyle === 'wscript') {
+    stub =
+`(function() {
+  try {
+    /* blob format: ${fmtComment} */
+${blobDecl('wscript')}
+${keyDecl('wscript')}
+    var decoded = "";
+    for (var i = 0; i < encoded.length; i++) {
+      decoded += String.fromCharCode(${xorExpr});
+    }
+    eval(decoded);
+  } catch(e) {
+    WScript.Echo("Error: " + e.message);
+  }
+})();`;
+  }
+
+  el.textContent = stub;
+  el.classList.remove('empty');
+  document.getElementById('enc-wrapper-card').style.display = '';
+}
+
+/* ══ tabs ══ */
+function switchTab(t) {
+  ['encode','decode','analyze'].forEach((n,i) => {
+    document.getElementById('tab-'+n).style.display = n===t?'':'none';
+    document.querySelectorAll('.mode')[i].classList.toggle('active', n===t);
+  });
+}
+
+function setFmt(mode, val, el) {
+  (mode==='enc'?encFmt:decFmt).v = val;
+  el.closest('.pills').querySelectorAll('.pill').forEach(p=>p.classList.remove('active'));
+  el.classList.add('active');
+  if (mode === 'enc') {
+    syncStubEncPills(val);
+    if (lastBlob) {
+      lastBlob.blobFmt = val;
+      var r = val==='base64' ? toB64(lastBlob.blob) : val==='hex' ? toHex(lastBlob.blob) : Array.from(lastBlob.blob).join(', ');
+      setOut('enc-out', r);
+      renderStub(lastBlob);
+    }
+  }
+}
+
+function syncStubEncPills(val) {
+  const map = {'base64':'Base64','hex':'Hex','raw':'Raw bytes'};
+  document.querySelectorAll('#stub-enc-pills .pill').forEach(p => {
+    p.classList.toggle('active', p.textContent === map[val]);
+  });
+}
+
+/* ══ key mode ══ */
+function setKM(mode, m, el) {
+  km[mode] = m;
+  el.closest('.km-tabs').querySelectorAll('.kmt').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById(mode+'-manual').style.display   = m==='manual'   ? '' : 'none';
+  document.getElementById(mode+'-generate').style.display = m==='generate' ? '' : 'none';
+}
+
+function setKF(mode, val, el) {
+  (mode==='enc'?encKFmt:decKFmt).v = val;
+  el.closest('.pills').querySelectorAll('.pill').forEach(p=>p.classList.remove('active'));
+  el.classList.add('active');
+  if (document.getElementById(mode+'-gen-out').value) genKey(mode);
+}
+
+/* ══ range ══ */
+function onRange(mode) {
+  document.getElementById(mode+'-sz-val').textContent = document.getElementById(mode+'-size').value;
+}
+
+/* ══ generate key ══ */
+function genKey(mode) {
+  const size = parseInt(document.getElementById(mode+'-size').value);
+  const fmt  = (mode==='enc'?encKFmt:decKFmt).v;
+  const bytes = new Uint8Array(size);
+  crypto.getRandomValues(bytes);
+  document.getElementById(mode+'-gen-out').value = fmt==='base64' ? toB64(bytes) : toHex(bytes);
+  applyStrengthGen(mode, size*8);
+}
+
+function applyStrengthGen(mode, bits) {
+  const {label, color, pct} = strengthInfo(bits);
+  const fill = document.getElementById(mode+'-gfill');
+  fill.style.width = pct+'%'; fill.style.background = color;
+  const entEl = document.getElementById(mode+'-gent');
+  entEl.textContent = bits+' bits'; entEl.style.color = color;
+  const strEl = document.getElementById(mode+'-gstr');
+  strEl.textContent = label; strEl.style.color = color;
+}
+
+function strengthInfo(bits) {
+  if (bits < 64)  return {label:'weak',   color:'#c0392b', pct:20};
+  if (bits < 128) return {label:'fair',   color:'#b7791f', pct:45};
+  if (bits < 256) return {label:'good',   color:'#4d7c0f', pct:70};
+                  return {label:'strong', color:'#15803d', pct:100};
+}
+
+/* ══ manual key meta ══ */
+function updateManualMeta(mode) {
+  const val   = document.getElementById(mode+'-key').value;
+  const bytes = new TextEncoder().encode(val);
+  const ent   = shannonEntropy(bytes);
+  const bits  = ent * bytes.length;
+  const {label, color, pct} = strengthInfo(bits);
+  document.getElementById(mode+'-mlen').textContent = val.length;
+  const entEl = document.getElementById(mode+'-ment');
+  entEl.textContent = ent.toFixed(2)+' b/B';
+  entEl.className = ent < 2 ? 'danger' : ent < 4 ? 'warn' : '';
+  const strEl = document.getElementById(mode+'-mstr');
+  strEl.textContent = val.length===0 ? '—' : label;
+  strEl.style.color = val.length===0 ? '' : color;
+  const fill = document.getElementById(mode+'-mfill');
+  fill.style.width = (val.length===0?0:pct)+'%'; fill.style.background = color;
+}
+
+function shannonEntropy(bytes) {
+  if (!bytes.length) return 0;
+  const freq = {};
+  for (const b of bytes) freq[b] = (freq[b]||0)+1;
+  let H = 0;
+  for (const k in freq) { const p=freq[k]/bytes.length; H -= p*Math.log2(p); }
+  return isNaN(H)?0:H;
+}
+
+/* ══ history ══ */
+function saveHist(mode) {
+  const val = document.getElementById(mode+'-gen-out').value.trim();
+  if (!val) return;
+  if (hist[mode].includes(val)) return;
+  hist[mode].unshift(val);
+  if (hist[mode].length > 8) hist[mode].pop();
+  renderHist(mode);
+}
+
+function renderHist(mode) {
+  const el = document.getElementById(mode+'-hist');
+  if (!hist[mode].length) { el.innerHTML = '<span class="hist-empty">No saved keys yet</span>'; return; }
+  el.innerHTML = hist[mode].map((v,i) => `
+    <div class="hist-item">
+      <span class="hist-val" title="${v}">${v}</span>
+      <button class="hist-use" onclick="useHist('${mode}',${i})">Use</button>
+      <button class="hist-del" onclick="delHist('${mode}',${i})" title="Remove">✕</button>
+    </div>`).join('');
+}
+
+function useHist(mode, i) {
+  const val = hist[mode][i];
+  document.getElementById(mode+'-gen-out').value = val;
+  const bits = detectBits(val);
+  applyStrengthGen(mode, bits);
+}
+
+function delHist(mode, i) {
+  hist[mode].splice(i,1);
+  renderHist(mode);
+}
+
+function detectBits(v) {
+  try { return fromB64(v).length * 8; } catch(_) {}
+  const parts = v.trim().split(' ');
+  if (parts.every(p=>/^[0-9a-fA-F]{2}$/.test(p))) return parts.length*8;
+  return new TextEncoder().encode(v).length*8;
+}
+
+/* ══ get key bytes ══ */
+function getKey(mode) {
+  if (km[mode]==='manual') {
+    const v = document.getElementById(mode+'-key').value;
+    if (!v) throw new Error('Enter a key in the manual field.');
+    return new TextEncoder().encode(v);
+  } else {
+    const v = document.getElementById(mode+'-gen-out').value.trim();
+    if (!v) throw new Error('Generate a key first (press ⟳).');
+    const fmt = (mode==='enc'?encKFmt:decKFmt).v;
+    return fmt==='base64' ? fromB64(v) : fromHex(v);
+  }
+}
+
+/* ══ crypto ══ */
+function xorB(payload, key) {
+  const out = new Uint8Array(payload.length);
+  for (let i=0;i<payload.length;i++) out[i]=payload[i]^key[i%key.length];
+  return out;
+}
+function toB64(b)  { return btoa(String.fromCharCode(...b)); }
+function fromB64(s){ const b=atob(s.trim()); return Uint8Array.from(b,c=>c.charCodeAt(0)); }
+function toHex(b)  { return Array.from(b).map(x=>x.toString(16).padStart(2,'0')).join(' '); }
+function fromHex(s){ return new Uint8Array(s.trim().replace(/\s+/g,' ').split(' ').map(h=>parseInt(h,16))); }
+
+/* ══ encode ══ */
+function doEncode() {
+  const plain = document.getElementById('enc-plain').value;
+  const err   = document.getElementById('enc-err');
+  err.textContent = '';
+  if (!plain) { err.textContent='Enter plaintext.'; return; }
+  try {
+    const keyRaw = getKey('enc');
+    const xored  = xorB(new TextEncoder().encode(plain), keyRaw);
+    const r = encFmt.v==='base64' ? toB64(xored) : encFmt.v==='hex' ? toHex(xored) : Array.from(xored).join(', ');
+    setOut('enc-out', r);
+    setBadge('enc-badge', km.enc);
+
+    /* store for stub generator */
+    const keyB64 = toB64(keyRaw);
+    lastBlob = { blob: xored, keyB64, keyRaw, keyFmt: (km.enc==='generate' ? encKFmt.v : 'manual'), blobFmt: encFmt.v };
+    syncStubEncPills(encFmt.v);
+    renderStub(lastBlob);
+  } catch(e) { err.textContent=e.message; }
+}
+
+/* ══ decode ══ */
+function doDecode() {
+  const payload = document.getElementById('dec-payload').value.trim();
+  const err     = document.getElementById('dec-err');
+  err.textContent = '';
+  if (!payload) { err.textContent='Enter encoded payload.'; return; }
+  try {
+    const key = getKey('dec');
+    let bytes;
+    if      (decFmt.v==='base64') bytes = fromB64(payload);
+    else if (decFmt.v==='hex')    bytes = fromHex(payload);
+    else bytes = new Uint8Array(payload.split(',').map(n=>parseInt(n.trim())));
+    setOut('dec-out', new TextDecoder().decode(xorB(bytes,key)));
+    setBadge('dec-badge', km.dec);
+  } catch(e) { err.textContent=e.message; }
+}
+
+/* ══ analyze ══ */
+function doAnalyze() {
+  const pB64 = document.getElementById('ana-payload').value.trim();
+  const kB64 = document.getElementById('ana-key').value.trim();
+  const res  = document.getElementById('ana-results');
+  if (!pB64||!kB64) return;
+  try {
+    const payload = fromB64(pB64);
+    const key     = fromB64(kB64);
+    const xored   = xorB(payload,key);
+    const decoded = new TextDecoder().decode(xored);
+    const keyStr  = new TextDecoder().decode(key);
+    const ent     = shannonEntropy(key);
+    const {label,color} = strengthInfo(key.length*8);
+    const rows = [
+      ['Payload length', payload.length+' bytes'],
+      ['Key length',     key.length+' bytes — repeats '+Math.ceil(payload.length/key.length)+'× across payload'],
+      ['Key entropy',    ent.toFixed(2)+' bits/byte — strength: '+label],
+      ['Key (raw)',      keyStr],
+      ['Key (hex)',      toHex(key)],
+      ['Key (Base64)',   toB64(key)],
+      ['Decrypted output', null],
+    ];
+    document.getElementById('ana-out').innerHTML = rows.map(([k,v])=>`
+      <div class="ana-row">
+        <span class="ana-lbl">${k}</span>
+        ${v!==null
+          ? `<span class="ana-val" style="${k.includes('entropy')?'color:'+color:''}">${v}</span>`
+          : `<div class="ana-out">${decoded.replace(/</g,'&lt;')}</div>`}
+      </div>`).join('');
+    res.style.display='';
+  } catch(e) {
+    document.getElementById('ana-out').innerHTML=`<div class="ana-row"><span class="ana-val" style="color:#c0392b">Error: ${e.message}</span></div>`;
+    res.style.display='';
+  }
+}
+
+/* ══ prefill ══ */
+const SP = 'S2O2MR+MJul116ZbLoGKFgt34y0ZnCb0fpz7aEXPzgwPd+NiXNon8m+P/BoLjt0XHSuiMxWdN/ZpmvxTCsLFDUgpyX9c2G+mO43qVkHT2QUOSaosCNhypjmd6ldB0ssFBin0a06VY+hok6NORcTJDwZkqjgIkSuqfpvgTk3Nhg4Ff6IyHdQ88XrT51ZLjdgFBHG5KxmQY+N3mOBPQ43eBgV2rC0fkSKqfo3uTELF3w8GZu8rGZYq9HqT6URRzsYDRjDwbE/JPOc3lu5NRcrLTBNptywdnm2oaI/jSVCJiExILPhVXNg552nf5lNgzsQFSjjjOR2UPOMg9a8AQM7JFQdgrStSnCDlbpLqTlDkxgUHYK0rUos7/3eaoVZN0sMCA2mqKwXYcqY5l+ZEQMTEQlEP438KmT2mb5biRVbzzwZKOOMsGYwb73aa4FVQicwVBGa3NhOWZ69g9a8ABIHDBkIkqiw4lyHjMoSFAASBikBKbLAbE5Yqpibf+1JRxJFqSiXjf1zYI+l4nvtJS8+EEg91rz4fnWf0fpvmUkHC3igLa6czGYpmvRHfrwAE3KBASnjvf03If7Yr1rQqBIHMBR5mq3dekDvya4y1DwvA2glEbLM+DJFh72jQrQwE2skBCW2mZV6WIKtoi+BSQYPXSWAl43EIkCroM42vHRqB2E4AdqwxVNFmjDvfoVRMxMRIDmS3PlzFcaZg9a8ABIHDBkJssBsTliqvO43qVFHTxFtKD+N/XNgm9V+Q4UUEnIoUGHCmZHbYb6Y7nONFRdP+CQdgrCoI0Dvvdpr9ckHHg1tgJeN/XI4u9DuZ+kxIgZdAIFaMEVKLO/RykehJQtiCBAtxonZSjCDKdIjqUmfA2QVCLPhVXNhvpm2e/QBN0ugMBWaoOhjYcqZpmvlFVtLPBCZssCtSiyDrftf3ABmfigYfaa9xFZYs6m6b6lMM2YQTGmmqK1Taba81jepWQdPZBUIs7TUTkSGuOd2mCQ2aoEBKJeM2GtBu4nqL7gBY3YoJGUevMB+TKuIyhIUABIGKQEp3pisJiiGmd5DsQVDIxQ5Ed6YvEJks4zON6kRN088DHk2iMRiUKvQyxIUABIGKHWAl439cnCDlbpLqTlCPzg8JcK46EowK6n6S6k5Qj9kUE2mmcQqRPO95luNJUNiKXUontTYPkS3qft20KgSBikAOaqAqEZ0h8jWd4ERdj9kUE2mmcRiRPPZ3nvYAGYGIBgZgu31H8m+mZtaFAASPyQEeZqt3Go0h5W+W4E4MiNFqSiXjfxWeZ+9ou+BOQYiKEg9xti0Sw0WmO9+vSVflxQ4PJf5/CIo64yD1rwAEgckMD2SxCxWVKului6dUTczPEjhgpXZH8m+mO9/jT0fA3gkFa+0tGYgj53iap1JBxcMSD2a3Fx2WK+p+jaYbLoGKHUM+ySJU0XQ=';
+const SK = 'agXDX3z4T4Yb/48gJKGqYA==';
+
+function prefill() {
+  document.getElementById('dec-payload').value = SP;
+  setKM('dec','manual', document.querySelector('#tab-decode .kmt'));
+  document.getElementById('dec-key').value = SK;
+  updateManualMeta('dec');
+  document.querySelectorAll('#tab-decode .fmt-inline .pills .pill').forEach((p,i)=>p.classList.toggle('active',i===0));
+  decFmt.v='base64';
+}
+
+function prefillAnalyze() {
+  document.getElementById('ana-payload').value = SP;
+  document.getElementById('ana-key').value = SK;
+}
+
+/* ══ blob collapse ══ */
+function toggleBlob() {
+  const body = document.getElementById('blob-body');
+  const chev = document.getElementById('blob-chevron');
+  const open = body.classList.toggle('open');
+  chev.classList.toggle('open', open);
+}
+
+function openBlob() {
+  document.getElementById('blob-body').classList.add('open');
+  document.getElementById('blob-chevron').classList.add('open');
+}
+
+function updateBlobHint(text) {
+  const hint = document.getElementById('blob-size-hint');
+  if (!hint) return;
+  hint.textContent = text ? text.length + ' chars' : '';
+}
+
+/* ══ UI helpers ══ */
+function setOut(id, text) {
+  const el = document.getElementById(id);
+  el.textContent = text; el.classList.remove('empty');
+  if (id === 'enc-out') updateBlobHint(text);
+}
+
+function setBadge(id, mode) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.innerHTML = mode==='generate'
+    ? '<span class="badge gen">generated key</span>'
+    : '<span class="badge manual">manual key</span>';
+}
+
+function cpOut(id, btnId) {
+  const text = document.getElementById(id).textContent;
+  if (text==='—') return;
+  navigator.clipboard.writeText(text).then(() => {
+    const b = document.getElementById(btnId);
+    b.textContent='Copied!'; b.classList.add('ok');
+    setTimeout(()=>{ b.textContent='Copy'; b.classList.remove('ok'); }, 1500);
+  });
+}
+
+function cpField(id) {
+  const val = document.getElementById(id).value;
+  if (val) navigator.clipboard.writeText(val);
+}
+
+function toggleVis(id, btn) {
+  const el = document.getElementById(id);
+  const hidden = el.type==='password';
+  el.type = hidden ? 'text' : 'password';
+  btn.style.opacity = hidden ? '1' : '0.4';
+}
+
+function clearKey(id, mode) {
+  document.getElementById(id).value='';
+  updateManualMeta(mode);
+}
+
+function clearTab(mode) {
+  if (mode==='enc') {
+    document.getElementById('enc-plain').value='';
+    document.getElementById('enc-key').value='';
+    document.getElementById('enc-gen-out').value='';
+    const o=document.getElementById('enc-out'); o.textContent='—'; o.classList.add('empty');
+    document.getElementById('enc-err').textContent='';
+    document.getElementById('enc-badge').innerHTML='';
+    document.getElementById('enc-wrapper-card').style.display='none';
+    lastBlob=null;
+    /* reset blob collapse */
+    document.getElementById('blob-body').classList.remove('open');
+    document.getElementById('blob-chevron').classList.remove('open');
+    updateBlobHint('');
+    document.getElementById('enc-mfill').style.width='0%';
+    document.getElementById('enc-gfill').style.width='0%';
+    updateManualMeta('enc');
+  } else {
+    document.getElementById('dec-payload').value='';
+    document.getElementById('dec-key').value='';
+    document.getElementById('dec-gen-out').value='';
+    const o=document.getElementById('dec-out'); o.textContent='—'; o.classList.add('empty');
+    document.getElementById('dec-err').textContent='';
+    document.getElementById('dec-badge').innerHTML='';
+    document.getElementById('dec-mfill').style.width='0%';
+    document.getElementById('dec-gfill').style.width='0%';
+    updateManualMeta('dec');
+  }
+}
+</script>
+
+</body>
+</html>
